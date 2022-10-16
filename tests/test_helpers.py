@@ -3,10 +3,13 @@ import string
 
 import pytest
 
-from helpers import record_function_handles_from_lines, record_function_handles_from_module, \
-    record_module_import_path_from_module, create_unique_function_id, record_function_context_and_content_from_module, \
+from module_helpers import record_module_import_path_from_module
+from function_helpers import (
+    record_function_handles_from_lines, record_function_handles_from_module,
+    create_unique_function_id,
+    record_function_context_and_content_from_module,
     extract_function_definition_closing_line_number
-
+)
 
 def test_record_all_module_file_paths():
     pass
@@ -54,6 +57,8 @@ def test_record_function_handles_from_lines(text_line, expected_function_handles
 )
 def test_record_function_handles_from_module(module_path,expected_record_function_handles):
 
+    print(os.getcwd())
+
     assert record_function_handles_from_module(module_path) == expected_record_function_handles
 
 
@@ -70,21 +75,22 @@ def test_record_all_functions_basic():
     pass
 
 @pytest.mark.parametrize(
-    'test_module_path,test_function_handle,expected_first_line_index,expected_last_line_index',
+    'test_module_path,test_function_handle,expected_first_line_index,expected_last_line_index,expected_function_calls',
     [
-        ('./tests/test_functions/test_functions.py','test_1',0,2),
-        ('./tests/test_functions/test_functions.py','test_2',5,9),
-        ('./tests/test_functions/test_functions.py','test_3',12,18)
+        ('./tests/test_functions/test_functions.py','test_1',0,2,[]),
+        ('./tests/test_functions/test_functions.py','test_2',5,9,['test_1']),
+        ('./tests/test_functions/test_functions.py','test_3',12,18,['test_2','test_1'])
     ]
 )
-def test_record_function_context_and_content_from_module(test_module_path,test_function_handle,expected_first_line_index,expected_last_line_index):
+def test_record_function_context_and_content_from_module(test_module_path,test_function_handle,expected_first_line_index,expected_last_line_index,expected_function_calls):
 
-    actual_first_line_index, actual_last_line_index, _ = record_function_context_and_content_from_module(module_path=test_module_path,
+    actual_first_line_index, actual_last_line_index, actual_function_calls = record_function_context_and_content_from_module(module_path=test_module_path,
                                                     function_handle=test_function_handle,
-                                                    all_function_handles=[])
+                                                    all_function_handles=['test_1','test_2','test_3'])
 
     assert actual_first_line_index == expected_first_line_index
     assert actual_last_line_index == expected_last_line_index
+    assert actual_function_calls == expected_function_calls
 
 
 @pytest.mark.parametrize(

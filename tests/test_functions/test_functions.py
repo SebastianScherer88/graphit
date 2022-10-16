@@ -12,8 +12,8 @@ def test_2(x):
 
 def test_3(x):
 
-    temp = test_1(1)
+    temp = test_2(1)
 
-    temp_2 = test_2(1)
+    temp_2 = test_1(1)
 
     return
