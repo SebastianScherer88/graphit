@@ -3,10 +3,10 @@ import string
 
 import pytest
 
+from helpers import create_unique_reference_id
 from module_helpers import record_module_import_path_from_module
 from function_helpers import (
     record_function_handles_from_lines, record_function_handles_from_module,
-    create_unique_function_id,
     record_function_context_and_content_from_module,
     extract_function_definition_closing_line_number
 )
@@ -64,7 +64,7 @@ def test_record_function_handles_from_module(module_path,expected_record_functio
 
 def test_create_unique_function_id():
 
-    randomly_generated_test_id = create_unique_function_id()
+    randomly_generated_test_id = create_unique_reference_id()
     assert len(randomly_generated_test_id) == 20
 
     for char in randomly_generated_test_id:

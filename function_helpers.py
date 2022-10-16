@@ -1,18 +1,19 @@
-import random
 import re
 from pathlib import Path
-from string import ascii_letters as letters
-from string import digits
 from typing import List, Tuple, Union
 
 from model import RecordedModule, RecordedFunctionBasic, RecordedFunction
 from settings import (
     logger,
     TAB_INDENTATION_LEVEL,
-    FUNCTION_DEFINITION_PATTERN,
-    FUNCTION_DEFINITION_PATTERN_STUMP,
-    FUNCTION_DEFINITION_PATTERN_TEMPLATE
+    GENERIC_FUNCTION_DEFINITION_PATTERN,
+    SPECIFIC_FUNCTION_DEFINITION_PATTERN_STUMP,
+    SPECIFIC_FUNCTION_DEFINITION_PATTERN_TEMPLATE,
+    SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_1,
+    SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_2
 )
+
+from helpers import create_unique_reference_id
 
 
 def record_function_handles_from_lines(text_file: List[str]) -> List[str]:
@@ -24,7 +25,7 @@ def record_function_handles_from_lines(text_file: List[str]) -> List[str]:
     :return:
     '''
 
-    function_definition_regex_pattern = re.compile(FUNCTION_DEFINITION_PATTERN)
+    function_definition_regex_pattern = re.compile(GENERIC_FUNCTION_DEFINITION_PATTERN)
 
     function_patterns = []
 
@@ -57,15 +58,6 @@ def record_function_handles_from_module(module_path: Path) -> List[str]:
     return function_handles
 
 
-def create_unique_function_id() -> str:
-    '''
-    Helper function that creates a 20 character unique id from alphanumeric characters
-    :return:
-    '''
-
-    return ''.join(random.choices(population=letters + digits,k=20))
-
-
 def record_all_functions_basic(recorded_modules: List[RecordedModule]) -> List[RecordedFunctionBasic]:
     '''
     Takes a list of recorded modules and inspects them for function definitions.
@@ -81,9 +73,10 @@ def record_all_functions_basic(recorded_modules: List[RecordedModule]) -> List[R
         recorded_functions_basic = []
 
         for recorded_function_handle in recorded_function_handles:
-            recorded_function_basic = RecordedFunctionBasic(function_handle=recorded_function_handle,
-                                                            source_module=recorded_module,
-                                                            unique_function_reference_id=create_unique_function_id())
+            recorded_function_basic = RecordedFunctionBasic(unique_function_reference_id=create_unique_reference_id(),
+                                                            function_handle=recorded_function_handle,
+                                                            source_module_reference_id=recorded_module.unique_module_reference_id,
+                                                            )
 
             recorded_functions_basic.append(recorded_function_basic)
 
@@ -117,7 +110,7 @@ def record_function_context_and_content_from_module(module_path: Path,
         raise file_error
 
     # detect the beginning of the function definition context
-    function_definition_regex_pattern = re.compile(FUNCTION_DEFINITION_PATTERN_STUMP + FUNCTION_DEFINITION_PATTERN_TEMPLATE.format(function_handle=function_handle))
+    function_definition_regex_pattern = re.compile(SPECIFIC_FUNCTION_DEFINITION_PATTERN_STUMP + SPECIFIC_FUNCTION_DEFINITION_PATTERN_TEMPLATE.format(function_handle=function_handle))
     regex_matches_in_line = [function_definition_regex_pattern.findall(python_module_content_record) for python_module_content_record in python_module_content]
     function_definition_opening_in_line = [False if match == [] else True for match in regex_matches_in_line]
 
@@ -135,7 +128,7 @@ def record_function_context_and_content_from_module(module_path: Path,
 
     for function_definition_line in python_module_content[function_definition_first_line_index+1:function_definition_last_line_index]:
         for known_function_handle in all_function_handles:
-            if known_function_handle in function_definition_line:
+            if (SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_1.format(function_handle=known_function_handle) in function_definition_line) or (SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_2.format(function_handle=known_function_handle) in function_definition_line):
                 function_handles_called.append(known_function_handle)
 
     return function_definition_first_line_index, function_definition_last_line_index, function_handles_called
@@ -196,7 +189,8 @@ def derive_normalized_function_definition_indentation_level(line: str,
     return normalized_indentation_level
 
 
-def record_all_functions(recorded_functions_basic: List[RecordedFunctionBasic]) -> List[RecordedFunction]:
+def record_all_functions(recorded_functions_basic: List[RecordedFunctionBasic],
+                         recorded_modules: List[RecordedModule]) -> List[RecordedFunction]:
     '''
     Takes a list of RecordedFunctionBasic and re-enters the respective source modules to scan for function definition
     scopes and function calls within that scope. Augments the incoming function meta data to create a list of
@@ -206,29 +200,38 @@ def record_all_functions(recorded_functions_basic: List[RecordedFunctionBasic]) 
     :return:
     '''
 
+    # get list of all known function handles sorted by length in descending order to avoid accidental mismatches on
+    # substrings
     all_known_function_handles = [recorded_function_basic.function_handle for recorded_function_basic in recorded_functions_basic]
+    all_known_function_handles.sort(key=lambda x: -len(x))
 
     recorded_functions = []
 
     for recorded_function_basic_i in recorded_functions_basic:
 
-        recorded_function_scope_and_content = record_function_context_and_content_from_module(module_path=recorded_function_basic_i.source_module.file_path,
+        # get the associated source module for this function
+        for recorded_module in recorded_modules:
+            if recorded_module.unique_module_reference_id == recorded_function_basic_i.source_module_reference_id:
+                associated_module = recorded_module
+                break
+
+        recorded_function_scope_and_content = record_function_context_and_content_from_module(module_path=associated_module.file_path,
                                                                                               function_handle=recorded_function_basic_i.function_handle,
                                                                                               all_function_handles=all_known_function_handles)
 
         definition_start_line_index, definition_end_line_index, called_function_handles = recorded_function_scope_and_content
 
-        called_functions_basic = []
+        called_functions_ids = []
 
         for called_function_handle in called_function_handles:
             for recorded_function_basic_j in recorded_functions_basic:
                 if called_function_handle == recorded_function_basic_j.function_handle:
-                    called_functions_basic.append(recorded_function_basic_j)
+                    called_functions_ids.append(recorded_function_basic_j.unique_function_reference_id)
 
         recorded_function = RecordedFunction(**recorded_function_basic_i.dict(),
                                              definition_start_line_index=definition_start_line_index,
                                              definition_end_line_index=definition_end_line_index,
-                                             ordered_function_calls=called_functions_basic)
+                                             ordered_function_calls=called_functions_ids)
 
         recorded_functions.append(recorded_function)
 

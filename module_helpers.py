@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import List
 
 from model import RecordedModule
+from helpers import create_unique_reference_id
 from settings import logger
 
 
@@ -108,8 +109,14 @@ def record_all_modules(reference_directory: Path,
     # convert all module file paths to import paths
     recorded_import_paths = [record_module_import_path_from_module(module_path=recorded_module_file_path,reference_directory=reference_directory) for recorded_module_file_path in recorded_module_file_paths]
 
+    # create unique reference ids for all modules
+    recorded_module_ids = [create_unique_reference_id() for module in recorded_module_file_paths]
 
     # create all module models
-    recorded_modules = [RecordedModule(file_path=file_path,import_path=import_path,reference_directory=reference_directory) for file_path, import_path in zip(recorded_module_file_paths,recorded_import_paths)]
+    recorded_modules = [RecordedModule(
+        unique_module_reference_id=module_id,
+        file_path=file_path,
+        import_path=import_path,
+        reference_directory=reference_directory) for module_id, file_path, import_path in zip(recorded_module_ids,recorded_module_file_paths,recorded_import_paths)]
 
     return recorded_modules
