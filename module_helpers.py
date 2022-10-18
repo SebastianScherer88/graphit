@@ -119,4 +119,7 @@ def record_all_modules(reference_directory: Path,
         import_path=import_path,
         reference_directory=reference_directory) for module_id, file_path, import_path in zip(recorded_module_ids,recorded_module_file_paths,recorded_import_paths)]
 
+    logger.info('Recorded all modules.')
+    logger.debug(f'Recorded modules: {recorded_modules}')
+
     return recorded_modules

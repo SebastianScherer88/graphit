@@ -15,7 +15,6 @@ from settings import (
 
 from helpers import create_unique_reference_id
 
-
 def record_function_handles_from_lines(text_file: List[str]) -> List[str]:
     '''
     Identifies function handles from a list of strings assumed to be lines from a python module,
@@ -81,6 +80,9 @@ def record_all_functions_basic(recorded_modules: List[RecordedModule]) -> List[R
             recorded_functions_basic.append(recorded_function_basic)
 
         all_recorded_functions_basic.extend(recorded_functions_basic)
+
+    logger.info('Recorded all basic function meta data.')
+    logger.debug(f'Recorded functions meta data (basic): {all_recorded_functions_basic}')
 
     return all_recorded_functions_basic
 
@@ -234,5 +236,8 @@ def record_all_functions(recorded_functions_basic: List[RecordedFunctionBasic],
                                              ordered_function_calls=called_functions_ids)
 
         recorded_functions.append(recorded_function)
+
+    logger.info(f'Recorded remaining function meta data.')
+    logger.debug(f'Recorded functions meta data (including scope and calls): {recorded_functions}')
 
     return recorded_functions
