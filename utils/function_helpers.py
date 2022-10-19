@@ -2,7 +2,8 @@ import re
 from pathlib import Path
 from typing import List, Tuple, Union
 
-from model import RecordedModule, RecordedFunctionBasic, RecordedFunction
+from utils.helpers import create_unique_reference_id
+from utils.model import RecordedModule, RecordedFunctionBasic, RecordedFunction
 from settings import (
     logger,
     TAB_INDENTATION_LEVEL,
@@ -10,10 +11,12 @@ from settings import (
     SPECIFIC_FUNCTION_DEFINITION_PATTERN_STUMP,
     SPECIFIC_FUNCTION_DEFINITION_PATTERN_TEMPLATE,
     SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_1,
-    SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_2
+    SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_2,
+    SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_3,
+    SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_4,
+    SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_5
 )
 
-from helpers import create_unique_reference_id
 
 def record_function_handles_from_lines(text_file: List[str]) -> List[str]:
     '''
@@ -130,7 +133,11 @@ def record_function_context_and_content_from_module(module_path: Path,
 
     for function_definition_line in python_module_content[function_definition_first_line_index+1:function_definition_last_line_index]:
         for known_function_handle in all_function_handles:
-            if (SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_1.format(function_handle=known_function_handle) in function_definition_line) or (SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_2.format(function_handle=known_function_handle) in function_definition_line):
+            if (SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_1.format(function_handle=known_function_handle) in function_definition_line)  \
+                    or (SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_2.format(function_handle=known_function_handle) in function_definition_line) \
+                    or (SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_3.format(function_handle=known_function_handle) in function_definition_line) \
+                    or (SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_4.format(function_handle=known_function_handle) in function_definition_line) \
+                    or (SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_5.format(function_handle=known_function_handle) in function_definition_line):
                 function_handles_called.append(known_function_handle)
 
     return function_definition_first_line_index, function_definition_last_line_index, function_handles_called

@@ -4,8 +4,8 @@ import re
 from pathlib import Path
 from typing import List
 
-from model import RecordedModule
-from helpers import create_unique_reference_id
+from utils.model import RecordedModule
+from utils.helpers import create_unique_reference_id
 from settings import logger
 
 
