@@ -1,15 +1,15 @@
 import os
 from argparse import ArgumentParser, Namespace
-from datetime import datetime as dt
 from pathlib import Path
 from typing import List
 
-from utils.function_helpers import record_all_functions_basic, record_all_functions
-from utils.helpers import create_output_directory
-from utils.meta_data_helpers import create_function_and_module_meta_data, get_graph_function_roots, create_graph_meta_data
-from utils.module_helpers import record_all_modules
-from utils.graph_helpers import plot_project_graph
 from settings import logger
+from utils.function_helpers import record_all_functions_basic, record_all_functions
+from utils.graph_helpers import plot_project_graph
+from utils.helpers import create_output_directory
+from utils.meta_data_helpers import create_function_and_module_meta_data, get_graph_function_roots, \
+    create_graph_meta_data
+from utils.module_helpers import record_all_modules
 
 
 def parse_graphit_arguments() -> Namespace:
@@ -110,13 +110,12 @@ def run_graphit(command_line_args: Namespace):
 
         # plot flow chart for current root function node and export
         full_diagram = plot_project_graph(graph_meta_data=graph_meta_data)
-        logger.info(f'Plotted graph for root {graph_root_function_id}.')
 
         graph_root_diagram_filepath = os.path.join(temp_output_dir,
                                                      f'graphit_{graph_root_function_id}_graph_root_diagram.svg')
         full_diagram.save(graph_root_diagram_filepath)
-        logger.info(f'Exported graph diagram for root {graph_root_function_id}.')
+        logger.info(f'Exported graph diagram for root {graph_root_function_id} to {graph_root_diagram_filepath}.')
 
-    logger.info(f'Done. @ {dt.now()}')
+    logger.info('Done.')
 
     return

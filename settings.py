@@ -1,7 +1,7 @@
 import logging
 from logging import DEBUG, INFO, WARNING, ERROR
 
-LOG_LEVEL = DEBUG
+# parsing settings
 TAB_INDENTATION_LEVEL = 4
 GENERIC_FUNCTION_DEFINITION_PATTERN = '(^[ \t\n]{0,20}def [a-zA-Z0-9_]{1,50}\()'
 SPECIFIC_FUNCTION_DEFINITION_PATTERN_STUMP = '(^[ \t\n]{0,20}def '
@@ -12,6 +12,7 @@ SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_3 = '[{function_handle}('
 SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_4 = '({function_handle}('
 SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_5 = '  {function_handle}('
 
+# flow chart visuals & layout
 FLOW_CHART_FONT_SIZE = 7
 FLOW_CHART_X_STEP_SMALL = 3.4
 FLOW_CHART_X_STEP_STANDARD = 5
@@ -44,6 +45,8 @@ FLOW_CHART_LINE_WIDTH=1
 
 FLOW_CHART_SIZE_Y = 250
 
+# logging
+LOG_LEVEL = INFO
 logger = logging.getLogger()
 logger.setLevel(level=LOG_LEVEL)
 
@@ -52,7 +55,7 @@ ch = logging.StreamHandler()
 ch.setLevel(LOG_LEVEL)
 
 # create formatter
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)s - %(funcName)s() - %(message)s')
 
 # add formatter to ch
 ch.setFormatter(formatter)
