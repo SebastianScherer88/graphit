@@ -90,7 +90,7 @@ def record_all_functions_basic(recorded_modules: List[RecordedModule]) -> List[R
     return all_recorded_functions_basic
 
 
-def record_function_context_and_content_from_module(module_path: Path,
+def record_function_content_from_module(module_path: Path,
                                                     function_handle: str,
                                                     all_function_handles: List[str]) -> Tuple[Union[None,int],
                                                                                               Union[None,int],
@@ -125,7 +125,7 @@ def record_function_context_and_content_from_module(module_path: Path,
     function_definition_first_line_index = function_definition_opening_in_line.index(True)
 
     # detect the end of the function definition context based on return statement with one more indentation
-    function_definition_last_line_index = extract_function_definition_closing_line_number(python_module_content,
+    function_definition_last_line_index = extract_function_last_line_number(python_module_content,
                                                                                               function_definition_first_line_index)
 
     # list all calls to known function occurring in the function definition context we have established
@@ -143,7 +143,7 @@ def record_function_context_and_content_from_module(module_path: Path,
     return function_definition_first_line_index, function_definition_last_line_index, function_handles_called
 
 
-def extract_function_definition_closing_line_number(python_module_content: List[str],
+def extract_function_last_line_number(python_module_content: List[str],
                                                     function_definition_first_line_index: int) -> int:
     '''
     Function that identifies the last line of a given function's definition, provided the python module as a list of
@@ -224,7 +224,7 @@ def record_all_functions(recorded_functions_basic: List[RecordedFunctionBasic],
                 associated_module = recorded_module
                 break
 
-        recorded_function_scope_and_content = record_function_context_and_content_from_module(module_path=associated_module.file_path,
+        recorded_function_scope_and_content = record_function_content_from_module(module_path=associated_module.file_path,
                                                                                               function_handle=recorded_function_basic_i.function_handle,
                                                                                               all_function_handles=all_known_function_handles)
 

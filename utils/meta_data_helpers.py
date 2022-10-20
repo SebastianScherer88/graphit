@@ -163,7 +163,7 @@ def create_graph_meta_data(root_function_reference_id: str,
     # clean graph index: remove leading '.'
     graph_meta_data['target_function_graph_index'] = graph_meta_data['target_function_graph_index'].apply(lambda x: x[1:] if (x and x[0] == '.') else x)
 
-    # add coordinats for plot function
+    # add coordinates for plot function
     graph_meta_data['graph_plot_x_coordinate'] = graph_meta_data['target_function_generation'] # 1,2,...
     graph_meta_data['graph_plot_y_coordinate'] = range(1,len(graph_meta_data)+1) # 1,2, ..
 

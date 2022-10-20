@@ -33,7 +33,6 @@ def parse_graphit_arguments() -> Namespace:
                         help='Set the module file paths and directories that need to be considered when looking for '
                              'python modules for this project.',
                         nargs='+',
-                        type=List[Path],
                         default=['.'],
                         )
     parser.add_argument('--module-ignore-scope',
@@ -109,9 +108,14 @@ def run_graphit(command_line_args: Namespace):
         graph_meta_data.to_csv(graph_root_meta_data_filepath, index=False)
         logger.info(f'Exported graph root {graph_root_function_id} meta data to: {graph_root_meta_data_filepath}')
 
-        # plot flow chart for current root function node
-        plot_project_graph(graph_meta_data=graph_meta_data)
+        # plot flow chart for current root function node and export
+        full_diagram = plot_project_graph(graph_meta_data=graph_meta_data)
         logger.info(f'Plotted graph for root {graph_root_function_id}.')
+
+        graph_root_diagram_filepath = os.path.join(temp_output_dir,
+                                                     f'graphit_{graph_root_function_id}_graph_root_diagram.svg')
+        full_diagram.save(graph_root_diagram_filepath)
+        logger.info(f'Exported graph diagram for root {graph_root_function_id}.')
 
     logger.info(f'Done. @ {dt.now()}')
 

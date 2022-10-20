@@ -12,7 +12,9 @@ from settings import (
     FLOW_CHART_ELEMENT_WIDTH_STANDARD,
     FLOW_CHART_SIZE_Y,
     FLOW_CHART_CIRCLE_COLOR,
-    FLOW_CHART_COLOR_PALETTE
+    FLOW_CHART_COLOR_PALETTE,
+    FLOW_CHART_FRAME_WIDTH,
+    FLOW_CHART_LINE_WIDTH
 )
 
 
@@ -83,12 +85,10 @@ def draw_horizontal_elements(drawing: schemdraw.Drawing,
             w=FLOW_CHART_ELEMENT_WIDTH_STANDARD,
             h=FLOW_CHART_ELEMENT_HEIGHT_STANDARD
         ). \
-            fill(graph_meta_data_record.color). \
+            fill(color=graph_meta_data_record.color). \
+            style(lw=FLOW_CHART_FRAME_WIDTH). \
             at([function_handle_box_position_x, function_handle_box_position_y]). \
-            label(
-            fontsize=FLOW_CHART_FONT_SIZE,
-            label=graph_meta_data_record.target_function_handle
-        )
+            label(fontsize=FLOW_CHART_FONT_SIZE,label=graph_meta_data_record.target_function_handle)
 
         drawing.add(function_handle_box)
 
@@ -103,16 +103,18 @@ def draw_horizontal_elements(drawing: schemdraw.Drawing,
             w=FLOW_CHART_ELEMENT_WIDTH_STANDARD,
             h=FLOW_CHART_ELEMENT_HEIGHT_STANDARD
         ). \
-            fill(graph_meta_data_record.color). \
+            fill(color=graph_meta_data_record.color). \
+            style(lw=FLOW_CHART_FRAME_WIDTH). \
             at([function_module_info_box_position_x, function_module_info_box_position_y]). \
-            label(
-            fontsize=FLOW_CHART_FONT_SIZE,
-            label=graph_meta_data_record.target_function_module_import_path)
+            label(fontsize=FLOW_CHART_FONT_SIZE,label=graph_meta_data_record.target_function_module_import_path)
 
         drawing.add(function_module_info_box)
 
         # draw the line between middle and last element
-        second_line = flow.Line().at(function_handle_box.E).to(function_module_info_box.W)
+        second_line = flow.Line().style(lw=FLOW_CHART_LINE_WIDTH). \
+            at(function_handle_box.E). \
+            to(function_module_info_box.W)
+
         drawing.add(second_line)
 
         # for all but the root generation, draw the first element of the sequence - the circle with the graph index
@@ -120,17 +122,19 @@ def draw_horizontal_elements(drawing: schemdraw.Drawing,
             function_graph_index_circle_position_x = function_handle_box_position_x - 1 * FLOW_CHART_X_STEP_SMALL
             function_graph_index_circle_position_y = function_handle_box_position_y
 
-            function_graph_index_circle = flow.Circle(r=FLOW_CHART_ELEMENT_HEIGHT_STANDARD / 2).fill(
-                FLOW_CHART_CIRCLE_COLOR).at(
-                [function_graph_index_circle_position_x, function_graph_index_circle_position_y]).label(
-                fontsize=FLOW_CHART_FONT_SIZE,
-                label=graph_meta_data_record.target_function_graph_index,
-            )
+            function_graph_index_circle = flow.Circle(r=FLOW_CHART_ELEMENT_HEIGHT_STANDARD / 2). \
+                fill(FLOW_CHART_CIRCLE_COLOR). \
+                style(lw=FLOW_CHART_FRAME_WIDTH). \
+                at([function_graph_index_circle_position_x, function_graph_index_circle_position_y]). \
+                label(fontsize=FLOW_CHART_FONT_SIZE,label=graph_meta_data_record.target_function_graph_index)
 
             drawing.add(function_graph_index_circle)
 
             # draw the line between first and middle element
-            second_line = flow.Line().at(function_graph_index_circle.E).to(function_handle_box.W)
+            second_line = flow.Line().style(lw=FLOW_CHART_LINE_WIDTH). \
+                at(function_graph_index_circle.E). \
+                to(function_handle_box.W)
+
             drawing.add(second_line)
 
             # add the drawn circle to the record for later reference - needed to draw vertical arrows
@@ -249,7 +253,7 @@ def draw_vertical_elements(drawing: schemdraw.Drawing,
             logger.debug(f'Drawing vertical element from {current_node} to {next_node}')
 
             # draw the vertical arrow element between the identified nodes
-            vertical_arrow = flow.Arrow().at(current_node.S).to(next_node.N)
+            vertical_arrow = flow.Arrow().style(lw=FLOW_CHART_LINE_WIDTH).at(current_node.S).to(next_node.N)
             drawing.add(vertical_arrow)
 
         # cover the vertical arrows going from e.g. '1.2' -> '1.3'
@@ -269,7 +273,7 @@ def draw_vertical_elements(drawing: schemdraw.Drawing,
             logger.debug(f'Drawing vertical element from {current_node} to {next_node}')
 
             # draw the vertical arrow element between the identified nodes
-            vertical_arrow = flow.Arrow().at(current_node.S).to(next_node.N)
+            vertical_arrow = flow.Arrow().style(lw=FLOW_CHART_LINE_WIDTH).at(current_node.S).to(next_node.N)
             drawing.add(vertical_arrow)
 
     return drawing
