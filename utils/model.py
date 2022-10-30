@@ -9,13 +9,10 @@ class RecordedModule(BaseModel):
     reference_directory: str = ''
 
 
-class RecordedFunctionBasic(BaseModel):
+class RecordedFunction(BaseModel):
     unique_function_reference_id: str
     function_handle: str
     source_module_reference_id: str
-
-
-class RecordedFunction(RecordedFunctionBasic):
     definition_start_line_index: int
     #definition_start_line_offset: int
     definition_end_line_index: int

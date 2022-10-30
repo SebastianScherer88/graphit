@@ -3,7 +3,7 @@ from argparse import ArgumentParser, Namespace
 from pathlib import Path
 
 from settings import logger
-from utils.function_helpers_new import record_all_functions_from_modules
+from utils.function_helpers import record_all_functions_from_modules
 from utils.graph_helpers import plot_project_graph
 from utils.helpers import create_output_directory
 from utils.meta_data_helpers import create_function_and_module_meta_data, get_graph_function_roots, \

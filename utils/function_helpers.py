@@ -1,250 +1,195 @@
-import re
-from pathlib import Path
-from typing import List, Tuple, Union
+import ast
+from functools import partial
+from typing import List, Dict, Type, Tuple
 
+from settings import logger
 from utils.helpers import create_unique_reference_id
-from utils.model import RecordedModule, RecordedFunctionBasic, RecordedFunction
-from settings import (
-    logger,
-    TAB_INDENTATION_LEVEL,
-    GENERIC_FUNCTION_DEFINITION_PATTERN,
-    SPECIFIC_FUNCTION_DEFINITION_PATTERN_STUMP,
-    SPECIFIC_FUNCTION_DEFINITION_PATTERN_TEMPLATE,
-    SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_1,
-    SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_2,
-    SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_3,
-    SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_4,
-    SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_5
-)
+from utils.model import RecordedModule, RecordedFunction
 
 
-def record_function_handles_from_lines(text_file: List[str]) -> List[str]:
+def record_functions_from_module(recorded_module: RecordedModule) -> List[RecordedFunction]:
+
+    with open(recorded_module.file_path, "r") as f:
+        module_ast = ast.parse(f.read(), recorded_module.file_path)
+
+    # import pdb
+    # pdb.set_trace()
+
+    logger.debug(f'Recording functions using AST from module {recorded_module.file_path}')
+
+    # get module level function definitions
+    module_function_definition_nodes = get_module_level_function_definition_nodes(module_ast)
+
+    # create RecordedFunction models from function definition nodes
+    recorded_functions = convert_nodes_to_recorded_functions(module_function_definition_nodes,
+                                                             source_module_reference_id=recorded_module.unique_module_reference_id)
+
+    return recorded_functions
+
+
+def convert_nodes_to_recorded_functions(module_function_definition_nodes: List[Type[ast.AST]],
+                                        source_module_reference_id: str) -> List[RecordedFunction]:
     '''
-    Identifies function handles from a list of strings assumed to be lines from a python module,
-    using a very basic regex pattern
+    Walks the graphs attached to the specified function definition nodes at module level. Extracts the meta data needed
+    to create the RecordedFunction pydantic model representation of each module level function definition.
+    Note that at this point the strings in the list type attribute ordered_function_calls are the function handles, not
+    the ids, since the matching of handle and ids can only be done once all functions have been recorded.
 
-    :param text_file:
-    :return:
+    Args:
+        module_function_definition_nodes:
+
+    Returns:
+
     '''
-
-    function_definition_regex_pattern = re.compile(GENERIC_FUNCTION_DEFINITION_PATTERN)
-
-    function_patterns = []
-
-    for text_line in text_file:
-        function_patterns.extend(function_definition_regex_pattern.findall(text_line))
-
-    function_handles = [function_pattern.split('def ')[1].replace('(','') for function_pattern in function_patterns]
-
-    return function_handles
-
-
-def record_function_handles_from_module(module_path: Path) -> List[str]:
-    '''
-    Identifies function handles from a given module as specified via its file path.
-    :param module_path:
-    :return:
-    '''
-
-    try:
-        # read in lines of text content from module file
-        with open(module_path, 'r') as python_module:
-            python_module_content = python_module.readlines()
-    except (FileExistsError, FileNotFoundError) as file_error:
-        logger.warning(f'Error trying to read in python module {module_path}')
-        raise file_error
-
-    # identify all function handles from this module
-    function_handles = record_function_handles_from_lines(text_file=python_module_content)
-
-    return function_handles
-
-
-def record_all_functions_basic(recorded_modules: List[RecordedModule]) -> List[RecordedFunctionBasic]:
-    '''
-    Takes a list of recorded modules and inspects them for function definitions.
-    :param recorded_modules:
-    :return:
-    '''
-
-    all_recorded_functions_basic = []
-
-    for recorded_module in recorded_modules:
-        recorded_function_handles = record_function_handles_from_module(module_path=recorded_module.file_path)
-
-        recorded_functions_basic = []
-
-        for recorded_function_handle in recorded_function_handles:
-            recorded_function_basic = RecordedFunctionBasic(unique_function_reference_id=create_unique_reference_id(),
-                                                            function_handle=recorded_function_handle,
-                                                            source_module_reference_id=recorded_module.unique_module_reference_id,
-                                                            )
-
-            recorded_functions_basic.append(recorded_function_basic)
-
-        all_recorded_functions_basic.extend(recorded_functions_basic)
-
-    logger.info('Recorded all basic function meta data.')
-    logger.debug(f'Recorded functions meta data (basic): {all_recorded_functions_basic}')
-
-    return all_recorded_functions_basic
-
-
-def record_function_content_from_module(module_path: Path,
-                                                    function_handle: str,
-                                                    all_function_handles: List[str]) -> Tuple[Union[None,int],
-                                                                                              Union[None,int],
-                                                                                              List[str]]:
-    '''
-    Given a function handle, checks the text file that is loaded from the specified python module and establishes the
-    starting and end line in that text file of that functions definition context. Uses that information to detect and
-    list all other instances of function calls drawing from the list of known function handles.
-
-    :param module_path:
-    :param function_handle:
-    :param all_function_handles:
-    :return:
-    '''
-
-    try:
-        # read in lines of text content from module file
-        with open(module_path, 'r') as python_module:
-            python_module_content = python_module.readlines()
-    except (FileExistsError, FileNotFoundError) as file_error:
-        logger.warning(f'Error trying to read in python module {module_path}')
-        raise file_error
-
-    # detect the beginning of the function definition context
-    function_definition_regex_pattern = re.compile(SPECIFIC_FUNCTION_DEFINITION_PATTERN_STUMP + SPECIFIC_FUNCTION_DEFINITION_PATTERN_TEMPLATE.format(function_handle=function_handle))
-    regex_matches_in_line = [function_definition_regex_pattern.findall(python_module_content_record) for python_module_content_record in python_module_content]
-    function_definition_opening_in_line = [False if match == [] else True for match in regex_matches_in_line]
-
-    if not any(function_definition_opening_in_line):
-        return (None, None, [])
-
-    function_definition_first_line_index = function_definition_opening_in_line.index(True)
-
-    # detect the end of the function definition context based on return statement with one more indentation
-    function_definition_last_line_index = extract_function_last_line_number(python_module_content,
-                                                                                              function_definition_first_line_index)
-
-    # list all calls to known function occurring in the function definition context we have established
-    function_handles_called = []
-
-    for function_definition_line in python_module_content[function_definition_first_line_index+1:function_definition_last_line_index]:
-        for known_function_handle in all_function_handles:
-            if (SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_1.format(function_handle=known_function_handle) in function_definition_line)  \
-                    or (SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_2.format(function_handle=known_function_handle) in function_definition_line) \
-                    or (SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_3.format(function_handle=known_function_handle) in function_definition_line) \
-                    or (SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_4.format(function_handle=known_function_handle) in function_definition_line) \
-                    or (SPECIFIC_FUNCTION_CALL_PATTERN_TEMPLATE_5.format(function_handle=known_function_handle) in function_definition_line):
-                function_handles_called.append(known_function_handle)
-
-    return function_definition_first_line_index, function_definition_last_line_index, function_handles_called
-
-
-def extract_function_last_line_number(python_module_content: List[str],
-                                                    function_definition_first_line_index: int) -> int:
-    '''
-    Function that identifies the last line of a given function's definition, provided the python module as a list of
-    strings, the function name and the index of the first line of the given function's definition.
-    It derives the level of indentation in the first line of the given function's definition and returns the index of
-    the first line with a 'return' statement with one additional level of indentation compared to the first line.
-    If it cant reasonably derive a last line for the given function's definition context, it returns the index of the
-    first line.
-
-    :param python_module_content:
-    :param function_definition_first_line_index:
-    :return:
-    '''
-
-    function_definition_starting_line = python_module_content[function_definition_first_line_index]
-
-    first_line_indentation_level = derive_normalized_function_definition_indentation_level(function_definition_starting_line,
-                                                                                           key_expression='def')
-
-    logger.debug(f'First line indentation level: {first_line_indentation_level}')
-
-    function_definition_last_line_index = function_definition_first_line_index
-
-    for current_line_index in range(function_definition_first_line_index+1,len(python_module_content)):
-        current_line = python_module_content[current_line_index]
-
-        logger.debug(f'Scanning line for {first_line_indentation_level + TAB_INDENTATION_LEVEL}x indented return statement: {current_line}')
-
-        if 'return' in current_line:
-
-            logger.debug(f'Found "return" statement in line: {current_line}')
-
-            normalized_function_definition_indentation_level = derive_normalized_function_definition_indentation_level(current_line,
-                                                                                                                       key_expression='return')
-
-            logger.debug(f'Indentation level of current line: {normalized_function_definition_indentation_level}')
-
-            if normalized_function_definition_indentation_level == first_line_indentation_level + TAB_INDENTATION_LEVEL:
-
-                function_definition_last_line_index = current_line_index
-                break
-
-    return function_definition_last_line_index
-
-
-def derive_normalized_function_definition_indentation_level(line: str,
-                                                            key_expression: str) -> int:
-
-    indentation_stump = line.split(key_expression)[0]
-    normalized_indentation_level = len(indentation_stump.replace('\t',' ' * TAB_INDENTATION_LEVEL).replace('\n',''))
-
-    return normalized_indentation_level
-
-
-def record_all_functions(recorded_functions_basic: List[RecordedFunctionBasic],
-                         recorded_modules: List[RecordedModule]) -> List[RecordedFunction]:
-    '''
-    Takes a list of RecordedFunctionBasic and re-enters the respective source modules to scan for function definition
-    scopes and function calls within that scope. Augments the incoming function meta data to create a list of
-    RecordedFunction objects.
-
-    :param recorded_functions_basic:
-    :return:
-    '''
-
-    # get list of all known function handles sorted by length in descending order to avoid accidental mismatches on
-    # substrings
-    all_known_function_handles = [recorded_function_basic.function_handle for recorded_function_basic in recorded_functions_basic]
-    all_known_function_handles.sort(key=lambda x: -len(x))
 
     recorded_functions = []
 
-    for recorded_function_basic_i in recorded_functions_basic:
+    for module_function_definition_node in module_function_definition_nodes:
+        # record basic data points
+        function_definition_payload = {'unique_function_reference_id':create_unique_reference_id(),
+                                       'function_handle':module_function_definition_node.name,
+                                       'source_module_reference_id':source_module_reference_id}
 
-        # get the associated source module for this function
-        for recorded_module in recorded_modules:
-            if recorded_module.unique_module_reference_id == recorded_function_basic_i.source_module_reference_id:
-                associated_module = recorded_module
-                break
+        # record definition start & finish, and all (nested) - even of locally defined ones - function calls made inside
+        # this definition
+        function_definition_payload.update(
+            {'definition_start_line_index':module_function_definition_node.lineno,
+             'definition_start_line_offset':module_function_definition_node.col_offset,
+             'definition_end_line_index':module_function_definition_node.lineno,
+             'definition_end_line_offset':module_function_definition_node.end_col_offset
+             }
+        )
 
-        recorded_function_scope_and_content = record_function_content_from_module(module_path=associated_module.file_path,
-                                                                                              function_handle=recorded_function_basic_i.function_handle,
-                                                                                              all_function_handles=all_known_function_handles)
+        # ordered_function_calls
+        ordered_function_call_handles: List[Tuple[str,int]] = []
 
-        definition_start_line_index, definition_end_line_index, called_function_handles = recorded_function_scope_and_content
+        logger.debug(f'Function definition node: {module_function_definition_node.__dict__}')
 
-        called_functions_ids = []
+        for child_node in ast.walk(module_function_definition_node):
+            if isinstance(child_node, ast.Call):
+                child_call_node = child_node
 
-        for called_function_handle in called_function_handles:
-            for recorded_function_basic_j in recorded_functions_basic:
-                if called_function_handle == recorded_function_basic_j.function_handle:
-                    called_functions_ids.append(recorded_function_basic_j.unique_function_reference_id)
+                grandchild_node = child_call_node.func
 
-        recorded_function = RecordedFunction(**recorded_function_basic_i.dict(),
-                                             definition_start_line_index=definition_start_line_index,
-                                             definition_end_line_index=definition_end_line_index,
-                                             ordered_function_calls=called_functions_ids)
+                if isinstance(grandchild_node, ast.Name):
+                    called_function_handle = grandchild_node.id
+                elif isinstance(grandchild_node, ast.Attribute):
+                    called_function_handle = grandchild_node.attr
+                else:
+                    logger.warning(f'Unexpected Call node func attribute type encountered: {grandchild_node.__dict__} | {type(grandchild_node).__name__}')
+                    continue
+
+                logger.debug(f'Child node: {child_call_node.__dict__} | {type(child_call_node).__name__}')
+                logger.debug(f'Grandchild node: {grandchild_node.__dict__} | {type(grandchild_node).__name__}')
+
+                ordered_function_call_handles.append((called_function_handle, child_call_node.lineno))
+
+        ordered_function_call_handles.sort(key = lambda x: x[1])
+        ordered_function_call_handles = [ordered_function_call_handle[0] for ordered_function_call_handle in ordered_function_call_handles]
+
+        function_definition_payload.update(ordered_function_calls=ordered_function_call_handles)
+
+        recorded_function = RecordedFunction(**function_definition_payload)
 
         recorded_functions.append(recorded_function)
 
-    logger.info(f'Recorded remaining function meta data.')
-    logger.debug(f'Recorded functions meta data (including scope and calls): {recorded_functions}')
-
     return recorded_functions
+
+
+def get_module_level_function_definition_nodes(module_ast: ast.AST) -> List[ast.FunctionDef]:
+    '''
+    Retrieves all the module level function definition nodes from the specified module's AST.
+    Args:
+        module_ast:
+
+    Returns:
+
+    '''
+
+    module_level_function_definition_nodes = []
+
+    for node in ast.walk(module_ast):
+        if isinstance(node,ast.FunctionDef):
+            if node.col_offset == 0:
+                module_level_function_definition_nodes.append(node)
+
+    return module_level_function_definition_nodes
+
+
+def get_function_handle_to_id_mapping(recorded_functions: List[RecordedFunction]) -> Dict:
+    '''
+    Constructs a dict mapping function_handle -> function reference id. Assumes all function handles are unique.
+
+    Args:
+        recorded_functions:
+
+    Returns:
+
+    '''
+
+    return dict([(rec_func.function_handle, rec_func.unique_function_reference_id) for rec_func in recorded_functions])
+
+
+def map_function_handle_to_id(function_handle: str,
+                              function_handle_to_id_mapping: Dict) -> str:
+
+    try:
+        function_id = function_handle_to_id_mapping[function_handle]
+    except KeyError as e:
+        function_id = None
+
+    return function_id
+
+
+def map_function_called_function_handles_to_ids(recorded_functions: List[RecordedFunction]) -> List[RecordedFunction]:
+    '''
+    Utility function that creates a mapping from function handle -> function id based on the inputs recorded_functions.
+    Assumes function handles are unique.
+    Then maps all the function handles in the recorded_functions' ordered_function_calls argument to function ids, and
+    returns the updated list of RecordedFunctions objects.
+
+    Args:
+        recorded_functions:
+
+    Returns:
+
+    '''
+
+    function_handle_to_id_mapping = get_function_handle_to_id_mapping(recorded_functions)
+
+    cleaned_functions = []
+
+    for recorded_function in recorded_functions:
+        cleaned_function = recorded_function.copy()
+
+        ordered_function_call_ids = [
+            map_function_handle_to_id(function_handle=function_call,
+                                      function_handle_to_id_mapping=function_handle_to_id_mapping) \
+            for function_call in recorded_function.ordered_function_calls
+        ]
+
+        ordered_function_call_ids = [called_function_id for called_function_id in ordered_function_call_ids if called_function_id is not None]
+
+        cleaned_function.ordered_function_calls = ordered_function_call_ids
+
+        cleaned_functions.append(cleaned_function)
+
+    return cleaned_functions
+
+
+def record_all_functions_from_modules(recorded_modules: List[RecordedModule]) -> List[RecordedFunction]:
+
+    all_functions = []
+
+    for module in recorded_modules:
+        # capture all function definitions in this module and convert into RecordedFunction type objects
+        all_functions.extend(record_functions_from_module(module))
+
+    # resolve function calls: map called handles onto the function id where a match can be found, otherwise remove the
+    # called handle from the attribute ordered_function_calls
+    all_functions_cleaned = map_function_called_function_handles_to_ids(recorded_functions=all_functions)
+
+    logger.info(f'Recorded remaining function meta data.')
+    logger.debug(f'Recorded functions meta data (including scope and calls): {all_functions_cleaned}')
+
+    return all_functions_cleaned
