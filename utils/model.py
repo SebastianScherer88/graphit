@@ -17,5 +17,7 @@ class RecordedFunctionBasic(BaseModel):
 
 class RecordedFunction(RecordedFunctionBasic):
     definition_start_line_index: int
+    #definition_start_line_offset: int
     definition_end_line_index: int
+    #definition_end_line_offset: int
     ordered_function_calls: List[str]

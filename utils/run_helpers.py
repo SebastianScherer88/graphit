@@ -5,6 +5,7 @@ from typing import List
 
 from settings import logger
 from utils.function_helpers import record_all_functions_basic, record_all_functions
+from utils.function_helpers_new import record_all_functions_from_modules
 from utils.graph_helpers import plot_project_graph
 from utils.helpers import create_output_directory
 from utils.meta_data_helpers import create_function_and_module_meta_data, get_graph_function_roots, \
@@ -33,6 +34,7 @@ def parse_graphit_arguments() -> Namespace:
                         help='Set the module file paths and directories that need to be considered when looking for '
                              'python modules for this project.',
                         nargs='+',
+                        type=str,
                         default=['.'],
                         )
     parser.add_argument('--module-ignore-scope',
@@ -41,7 +43,7 @@ def parse_graphit_arguments() -> Namespace:
                         help='Set the module file paths and directories that should be ignored when looking for python'
                              ' modules for this project.',
                         nargs='+',
-                        type=List[Path],
+                        type=str,
                         default=['venv', 'tests'],
                         )
     parser.add_argument('--meta-data-export-directory',
@@ -68,13 +70,8 @@ def run_graphit(command_line_args: Namespace):
                                      scope=command_line_args.module_scope,
                                      ignore_scope=command_line_args.module_ignore_scope)
 
-    # create pydantic models containing meta data on all found functions:
-    # - basic, first, then
-    # - complete
-    all_functions_basic = record_all_functions_basic(recorded_modules=all_modules)
-
-    all_functions = record_all_functions(recorded_functions_basic=all_functions_basic,
-                                         recorded_modules=all_modules)
+    # create pydantic models containing meta data on all found functions
+    all_functions = record_all_functions_from_modules(recorded_modules=all_modules)
 
     # create all non-graph meta data & export
     module_meta_data, function_meta_data, function_dependency_meta_data = create_function_and_module_meta_data(all_modules,
