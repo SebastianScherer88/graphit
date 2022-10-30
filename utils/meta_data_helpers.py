@@ -32,6 +32,8 @@ def create_function_and_module_meta_data(all_modules: List[RecordedModule],
                                                                                     'source_module_reference_id',
                                                                                     'definition_start_line_index',
                                                                                     'definition_end_line_index',
+                                                                                    'definition_start_line_offset',
+                                                                                    'definition_end_line_offset',
                                                                                     'ordered_function_calls']]
     function_meta_data['n_dependency_functions'] = function_meta_data['ordered_function_calls'].apply(lambda x: len(x))
     function_meta_data.drop('ordered_function_calls',inplace=True,axis=1)

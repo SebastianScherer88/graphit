@@ -14,7 +14,7 @@ class RecordedFunction(BaseModel):
     function_handle: str
     source_module_reference_id: str
     definition_start_line_index: int
-    #definition_start_line_offset: int
+    definition_start_line_offset: int
     definition_end_line_index: int
-    #definition_end_line_offset: int
+    definition_end_line_offset: int
     ordered_function_calls: List[str]
