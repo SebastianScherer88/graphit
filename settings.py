@@ -34,7 +34,7 @@ FLOW_CHART_COLOR_PALETTE = [
     'lightgreen',#90EE90
     #'lightgrey',#D3D3D3
     'lightyellow', #FFFFE0,
-    'lightgoldenrodyellow',#FAFAD2
+    #'lightgoldenrodyellow',#FAFAD2
     'lightsalmon',#FFA07A
     'lightpink',#FFB6C1
     'lightcoral',#F08080
