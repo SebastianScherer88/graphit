@@ -7,7 +7,7 @@ your code base.
 
 The `./graphit` subdirectory of this repo can be seen as its own python project and produces the following dependency flow chart:
 
-![This project's function dependency graph](./example_flow.svg)
+![This project's function dependency graph](./graphit_example_flow.svg)
 
 # Installation
 
