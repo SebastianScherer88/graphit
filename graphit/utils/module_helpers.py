@@ -114,7 +114,7 @@ def record_all_modules(reference_directory: Path,
 
     # create all module models
     recorded_modules = [RecordedModule(
-        unique_module_reference_id=module_id,
+        unique_reference_id=module_id,
         file_path=file_path,
         import_path=import_path,
         reference_directory=reference_directory) for module_id, file_path, import_path in zip(recorded_module_ids,recorded_module_file_paths,recorded_import_paths)]

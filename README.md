@@ -42,7 +42,7 @@ where
 - `{list} {of} {(sub)directories} {to} {ignore}` is a list of subdirectories/files separated by a space that `graphit` should ignore when scanning for python modules. Examples are local `venv` or `__pycache__` directories
 
 
-For example, to create the flow chart of functional dependencies for the `grpahit` project, from the top directory of this repository simply run
+For example, to create the flow chart of functional dependencies for the `graphit` project, from the top directory of this repository simply run
 
 ```
 run_graphit -r ./graphit -m outputs

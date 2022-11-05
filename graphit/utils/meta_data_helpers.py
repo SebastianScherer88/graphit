@@ -27,7 +27,7 @@ def create_function_and_module_meta_data(all_modules: List[RecordedModule],
     module_meta_data = pd.DataFrame([record.dict() for record in all_modules])
 
     # function meta data
-    function_meta_data = pd.DataFrame([record.dict() for record in all_functions])[['unique_function_reference_id',
+    function_meta_data = pd.DataFrame([record.dict() for record in all_functions])[['unique_reference_id',
                                                                                     'function_handle',
                                                                                     'source_module_reference_id',
                                                                                     'definition_start_line_index',
@@ -53,7 +53,7 @@ def create_function_and_module_meta_data(all_modules: List[RecordedModule],
 
             function_dependency_meta_data_elements.append(function_meta_data_element)
 
-    function_dependency_meta_data = pd.DataFrame(function_dependency_meta_data_elements)[['unique_function_reference_id','function_dependency_reference_id','function_dependency_index']]
+    function_dependency_meta_data = pd.DataFrame(function_dependency_meta_data_elements)[['unique_reference_id','function_dependency_reference_id','function_dependency_index']]
 
     logger.debug('Created all function and module meta data files for export.')
 
@@ -77,9 +77,9 @@ def get_graph_function_roots(function_meta_data: pd.DataFrame,
 
     function_as_dependency_ids = function_dependency_meta_data['function_dependency_reference_id'].tolist()
 
-    is_standalone_function_id = ~function_meta_data['unique_function_reference_id'].isin(function_as_dependency_ids)
+    is_standalone_function_id = ~function_meta_data['unique_reference_id'].isin(function_as_dependency_ids)
 
-    standalone_function_ids = function_meta_data.loc[is_standalone_function_id,'unique_function_reference_id'].tolist()
+    standalone_function_ids = function_meta_data.loc[is_standalone_function_id,'unique_reference_id'].tolist()
 
     return standalone_function_ids
 
@@ -122,14 +122,14 @@ def create_graph_meta_data(root_function_reference_id: str,
 
             # get all dependencies for this source function
             current_generation_slice = function_dependency_meta_data.loc[
-                function_dependency_meta_data['unique_function_reference_id'] == current_source_function_id].sort_values('function_dependency_index',ascending=True)
+                function_dependency_meta_data['unique_reference_id'] == current_source_function_id].sort_values('function_dependency_index',ascending=True)
 
             if current_generation_slice.empty:
                 # no dependencies recorded for this source function; move on to next element of previous generation
                 continue
             else:
                 # format the non-trivial dependencies of this source function
-                current_generation_slice.rename(columns={'unique_function_reference_id': 'source_function_id',
+                current_generation_slice.rename(columns={'unique_reference_id': 'source_function_id',
                                                          'function_dependency_reference_id': 'target_function_id',
                                                          'function_dependency_index': 'target_function_dependency_index'},
                                                 inplace=True)
@@ -170,21 +170,21 @@ def create_graph_meta_data(root_function_reference_id: str,
     graph_meta_data['graph_plot_y_coordinate'] = range(1,len(graph_meta_data)+1) # 1,2, ..
 
     # merge on function information needed for the graph visualization
-    graph_meta_data = graph_meta_data.merge(function_meta_data[['unique_function_reference_id','function_handle','source_module_reference_id']],
+    graph_meta_data = graph_meta_data.merge(function_meta_data[['unique_reference_id','function_handle','source_module_reference_id']],
                                             how = 'left',
                                             left_on = 'target_function_id',
-                                            right_on = 'unique_function_reference_id'). \
+                                            right_on = 'unique_reference_id'). \
         rename(columns={'function_handle':'target_function_handle'}). \
-        drop('unique_function_reference_id',axis=1)
+        drop('unique_reference_id',axis=1)
 
     # merge on module information needed for the graph visualizaation
     graph_meta_data = graph_meta_data.merge(module_meta_data,
                                             how='left',
                                             left_on = 'source_module_reference_id',
-                                            right_on = 'unique_module_reference_id'). \
+                                            right_on = 'unique_reference_id'). \
         rename(columns={'file_path':'target_function_file_path',
                         'import_path':'target_function_module_import_path'}). \
-        drop(['unique_module_reference_id','source_module_reference_id'],axis=1)
+        drop(['unique_reference_id','source_module_reference_id'],axis=1)
 
     graph_meta_data['target_function_import_path'] = graph_meta_data[['target_function_module_import_path','target_function_handle']].apply(lambda x: '.'.join(x), axis=1)
     graph_meta_data.drop(['source_function_id','target_function_id'],axis=1,inplace=True)

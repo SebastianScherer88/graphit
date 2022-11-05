@@ -1,10 +1,10 @@
 import ast
 from functools import partial
-from typing import List, Dict, Type, Tuple
+from typing import List, Dict, Union, Type, Tuple
 
 from graphit.settings import logger
 from graphit.utils.helpers import create_unique_reference_id
-from graphit.utils.model import RecordedModule, RecordedFunction
+from graphit.utils.model import RecordedModule, RecordedFunction, RecordedClass
 
 
 def record_functions_from_module(recorded_module: RecordedModule) -> List[RecordedFunction]:
@@ -17,55 +17,57 @@ def record_functions_from_module(recorded_module: RecordedModule) -> List[Record
 
     logger.debug(f'Recording functions using AST from module {recorded_module.file_path}')
 
-    # get module level function definitions
-    module_function_definition_nodes = get_module_level_function_definition_nodes(module_ast)
+    # get module level function and class definitions
+    module_function_and_class_definition_nodes = get_module_level_function_and_class_definition_nodes(module_ast)
 
     # create RecordedFunction models from function definition nodes
-    recorded_functions = convert_nodes_to_recorded_functions(module_function_definition_nodes,
-                                                             source_module_reference_id=recorded_module.unique_module_reference_id)
+    recorded_functions = convert_nodes_to_recorded_functions_and_classes(
+        module_function_and_class_definition_nodes=module_function_and_class_definition_nodes,
+        source_module_reference_id=recorded_module.unique_reference_id)
 
     return recorded_functions
 
 
-def convert_nodes_to_recorded_functions(module_function_definition_nodes: List[Type[ast.AST]],
-                                        source_module_reference_id: str) -> List[RecordedFunction]:
+def convert_nodes_to_recorded_functions_and_classes(module_function_and_class_definition_nodes: List[Type[ast.AST]],
+                                                    source_module_reference_id: str) -> List[Union[RecordedFunction, RecordedClass]]:
     '''
-    Walks the graphs attached to the specified function definition nodes at module level. Extracts the meta data needed
-    to create the RecordedFunction pydantic model representation of each module level function definition.
+    Walks the graphs attached to the specified function and class definition nodes at module level. Extracts the meta data needed
+    to create the RecordedFunction and RecordedClass pydantic model representation of each module level function and class definition.
     Note that at this point the strings in the list type attribute ordered_function_calls are the function handles, not
-    the ids, since the matching of handle and ids can only be done once all functions have been recorded.
+    the ids, since the matching of handle and ids can only be done once all functions and classes have been recorded.
 
     Args:
-        module_function_definition_nodes:
+        module_function_and_class_definition_nodes:
 
     Returns:
 
     '''
 
-    recorded_functions = []
+    recorded_definitions = []
 
-    for module_function_definition_node in module_function_definition_nodes:
+    for module_function_or_class_definition_node in module_function_and_class_definition_nodes:
+
         # record basic data points
-        function_definition_payload = {'unique_function_reference_id':create_unique_reference_id(),
-                                       'function_handle':module_function_definition_node.name,
+        definition_payload = {'unique_reference_id':create_unique_reference_id(),
+                                       'function_handle':module_function_or_class_definition_node.name,
                                        'source_module_reference_id':source_module_reference_id}
 
         # record definition start & finish, and all (nested) - even of locally defined ones - function calls made inside
         # this definition
-        function_definition_payload.update(
-            {'definition_start_line_index':module_function_definition_node.lineno,
-             'definition_start_line_offset':module_function_definition_node.col_offset,
-             'definition_end_line_index':module_function_definition_node.lineno,
-             'definition_end_line_offset':module_function_definition_node.end_col_offset
+        definition_payload.update(
+            {'definition_start_line_index':module_function_or_class_definition_node.lineno,
+             'definition_start_line_offset':module_function_or_class_definition_node.col_offset,
+             'definition_end_line_index':module_function_or_class_definition_node.lineno,
+             'definition_end_line_offset':module_function_or_class_definition_node.end_col_offset
              }
         )
 
         # ordered_function_calls
         ordered_function_call_handles: List[Tuple[str,int]] = []
 
-        logger.debug(f'Function definition node: {module_function_definition_node.__dict__}')
+        logger.debug(f'Function definition node: {module_function_or_class_definition_node.__dict__}')
 
-        for child_node in ast.walk(module_function_definition_node):
+        for child_node in ast.walk(module_function_or_class_definition_node):
             if isinstance(child_node, ast.Call):
                 child_call_node = child_node
 
@@ -87,18 +89,23 @@ def convert_nodes_to_recorded_functions(module_function_definition_nodes: List[T
         ordered_function_call_handles.sort(key = lambda x: x[1])
         ordered_function_call_handles = [ordered_function_call_handle[0] for ordered_function_call_handle in ordered_function_call_handles]
 
-        function_definition_payload.update(ordered_function_calls=ordered_function_call_handles)
+        definition_payload.update(ordered_function_calls=ordered_function_call_handles)
 
-        recorded_function = RecordedFunction(**function_definition_payload)
+        # create function or class definition model and add to storage
+        # set the class type
+        if isinstance(module_function_or_class_definition_node,ast.FunctionDef):
+            recorded_definition = RecordedFunction(**definition_payload)
+        elif isinstance(module_function_or_class_definition_node,ast.ClassDef):
+            recorded_definition = RecordedClass(**definition_payload)
 
-        recorded_functions.append(recorded_function)
+        recorded_definitions.append(recorded_definition)
 
-    return recorded_functions
+    return recorded_definitions
 
 
-def get_module_level_function_definition_nodes(module_ast: ast.AST) -> List[ast.FunctionDef]:
+def get_module_level_function_and_class_definition_nodes(module_ast: ast.AST) -> List[Union[ast.FunctionDef,ast.ClassDef]]:
     '''
-    Retrieves all the module level function definition nodes from the specified module's AST.
+    Retrieves all the module level function and class definition nodes from the specified module's AST.
     Args:
         module_ast:
 
@@ -106,14 +113,14 @@ def get_module_level_function_definition_nodes(module_ast: ast.AST) -> List[ast.
 
     '''
 
-    module_level_function_definition_nodes = []
+    module_level_function_and_class_definition_nodes = []
 
     for node in ast.walk(module_ast):
-        if isinstance(node,ast.FunctionDef):
+        if isinstance(node,ast.FunctionDef) or isinstance(node,ast.ClassDef):
             if node.col_offset == 0:
-                module_level_function_definition_nodes.append(node)
+                module_level_function_and_class_definition_nodes.append(node)
 
-    return module_level_function_definition_nodes
+    return module_level_function_and_class_definition_nodes
 
 
 def get_function_handle_to_id_mapping(recorded_functions: List[RecordedFunction]) -> Dict:
@@ -127,7 +134,7 @@ def get_function_handle_to_id_mapping(recorded_functions: List[RecordedFunction]
 
     '''
 
-    return dict([(rec_func.function_handle, rec_func.unique_function_reference_id) for rec_func in recorded_functions])
+    return dict([(rec_func.function_handle, rec_func.unique_reference_id) for rec_func in recorded_functions])
 
 
 def map_function_handle_to_id(function_handle: str,
