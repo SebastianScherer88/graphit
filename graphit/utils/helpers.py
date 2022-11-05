@@ -5,7 +5,7 @@ from pathlib import Path
 from string import ascii_letters as letters
 from string import digits
 
-from settings import logger
+from graphit.settings import logger
 
 
 def create_output_directory(output_directory: Path) -> Path:

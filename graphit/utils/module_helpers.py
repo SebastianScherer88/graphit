@@ -6,7 +6,7 @@ from typing import List
 
 from utils.model import RecordedModule
 from utils.helpers import create_unique_reference_id
-from settings import logger
+from graphit.settings import logger
 
 
 def record_all_module_file_paths(reference_directory: Path,

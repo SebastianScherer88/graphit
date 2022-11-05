@@ -2,7 +2,7 @@ import ast
 from functools import partial
 from typing import List, Dict, Type, Tuple
 
-from settings import logger
+from graphit.settings import logger
 from utils.helpers import create_unique_reference_id
 from utils.model import RecordedModule, RecordedFunction
 

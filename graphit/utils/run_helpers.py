@@ -2,7 +2,7 @@ import os
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 
-from settings import logger
+from graphit.settings import logger
 from utils.function_helpers import record_all_functions_from_modules
 from utils.graph_helpers import plot_project_graph
 from utils.helpers import create_output_directory

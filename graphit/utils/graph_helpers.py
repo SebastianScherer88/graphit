@@ -2,7 +2,7 @@ import pandas as pd
 import schemdraw
 from schemdraw import flow
 
-from settings import (
+from graphit.settings import (
     logger,
     FLOW_CHART_FONT_SIZE,
     FLOW_CHART_X_STEP_SMALL,

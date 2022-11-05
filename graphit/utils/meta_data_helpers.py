@@ -4,7 +4,7 @@ from typing import Tuple
 import pandas as pd
 
 from utils.model import RecordedModule, RecordedFunction
-from settings import logger
+from graphit.settings import logger
 
 
 def create_function_and_module_meta_data(all_modules: List[RecordedModule],

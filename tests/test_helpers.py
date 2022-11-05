@@ -3,9 +3,9 @@ import string
 
 import pytest
 
-from utils.helpers import create_unique_reference_id
-from utils.module_helpers import record_module_import_path_from_module
-from utils.function_helpers import (
+from graphit.utils.helpers import create_unique_reference_id
+from graphit.utils.module_helpers import record_module_import_path_from_module
+from graphit.utils.function_helpers import (
     record_function_handles_from_lines, record_function_handles_from_module,
     record_function_context_and_content_from_module,
     extract_function_definition_closing_line_number
