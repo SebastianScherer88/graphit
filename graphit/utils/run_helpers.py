@@ -18,7 +18,7 @@ def parse_graphit_arguments() -> Namespace:
 
     '''
 
-    parser = ArgumentParser('Parse the graphit project dependencies')
+    parser = ArgumentParser('Parse and visuazlie a given project\'s dependencies')
     parser.add_argument('--reference-directory',
                         '-r',
                         dest='reference_directory',
@@ -58,7 +58,7 @@ def parse_graphit_arguments() -> Namespace:
     return command_line_args
 
 
-def run_graphit(command_line_args: Namespace):
+def run_configured_graphit(command_line_args: Namespace):
 
     # prepare output directory
     temp_output_dir = create_output_directory(command_line_args.meta_data_export_directory)
