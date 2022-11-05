@@ -3,7 +3,7 @@ from typing import Tuple
 
 import pandas as pd
 
-from utils.model import RecordedModule, RecordedFunction
+from graphit.utils.model import RecordedModule, RecordedFunction
 from graphit.settings import logger
 
 

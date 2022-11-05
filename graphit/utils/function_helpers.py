@@ -3,8 +3,8 @@ from functools import partial
 from typing import List, Dict, Type, Tuple
 
 from graphit.settings import logger
-from utils.helpers import create_unique_reference_id
-from utils.model import RecordedModule, RecordedFunction
+from graphit.utils.helpers import create_unique_reference_id
+from graphit.utils.model import RecordedModule, RecordedFunction
 
 
 def record_functions_from_module(recorded_module: RecordedModule) -> List[RecordedFunction]:

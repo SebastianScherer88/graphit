@@ -3,12 +3,12 @@ from argparse import ArgumentParser, Namespace
 from pathlib import Path
 
 from graphit.settings import logger
-from utils.function_helpers import record_all_functions_from_modules
-from utils.graph_helpers import plot_project_graph
-from utils.helpers import create_output_directory
-from utils.meta_data_helpers import create_function_and_module_meta_data, get_graph_function_roots, \
+from graphit.utils.function_helpers import record_all_functions_from_modules
+from graphit.utils.graph_helpers import plot_project_graph
+from graphit.utils.helpers import create_output_directory
+from graphit.utils.meta_data_helpers import create_function_and_module_meta_data, get_graph_function_roots, \
     create_graph_meta_data
-from utils.module_helpers import record_all_modules
+from graphit.utils.module_helpers import record_all_modules
 
 
 def parse_graphit_arguments() -> Namespace:

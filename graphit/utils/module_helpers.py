@@ -4,8 +4,8 @@ import re
 from pathlib import Path
 from typing import List
 
-from utils.model import RecordedModule
-from utils.helpers import create_unique_reference_id
+from graphit.utils.model import RecordedModule
+from graphit.utils.helpers import create_unique_reference_id
 from graphit.settings import logger
 
 
